@@ -4,10 +4,10 @@ import { BlankPanel } from '../components/common/BlankPanel'
 import { DifficultyTag } from '../components/common/DifficultyTag'
 import { SizeField } from '../components/common/SizeField'
 import { StepRail } from '../components/common/StepRail'
-import { useStepOrder } from '../hooks/useStepOrder'
+import { useAssemblyPlan } from '../hooks/useAssemblyPlan'
 import { useJointStore } from '../stores/jointStore'
 import { checkTolerance, formatDimension } from '../utils/measure'
-import { exportJointData } from '../utils/export'
+import { exportAssemblyPlan, exportJointData } from '../utils/export'
 
 export default function JointDetail() {
   const { id: idParam } = useParams()
@@ -18,7 +18,17 @@ export default function JointDetail() {
   const loading = useJointStore((state) => state.loading)
   const loadAll = useJointStore((state) => state.loadAll)
   const updateMemberDimensions = useJointStore((state) => state.updateMemberDimensions)
-  const { steps, totalDurationSec, currentStepIndex, move, setCurrentStep } = useStepOrder(id)
+  const {
+    steps,
+    totalDurationSec,
+    currentStepIndex,
+    validation,
+    validationByStep,
+    move,
+    setCurrentStep,
+    memberById,
+    stepById,
+  } = useAssemblyPlan(id)
 
   useEffect(() => {
     void loadAll()
@@ -64,13 +74,14 @@ export default function JointDetail() {
           </div>
           <div className="relative grid grid-cols-3 gap-3">
             <Stat label="构件" value={currentMembers.length} unit="件" />
-            <Stat label="步序" value={steps.length} unit="步" />
+            <Stat label="可执行" value={validation.executableCount} unit={`/ ${steps.length} 步`} />
             <Stat label="演示" value={totalDurationSec} unit="秒" />
           </div>
         </div>
         <div className="flex flex-wrap gap-3 border-t border-wood-100 bg-wood-50/60 px-6 py-4 sm:px-8">
-          <Link className="primary-button" to={`/joints/${joint.id}/steps`}>编排拆装步序</Link>
+          <Link className="primary-button" to={`/joints/${joint.id}/steps`}>编排装配计划</Link>
           <Link className="secondary-button" to={`/joints/${joint.id}/diagram`}>进入示意图绘制台</Link>
+          <button type="button" className="secondary-button" onClick={() => void exportAssemblyPlan(joint.id, joint.name)}>导出装配计划</button>
           <button type="button" className="secondary-button" onClick={() => void exportJointData(joint.id, joint.name)}>导出当前类型</button>
         </div>
       </section>
@@ -196,15 +207,32 @@ export default function JointDetail() {
         <div className="space-y-4">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-wood-900">拆装步序</h2>
-              <p className="mt-1 text-sm text-stone-500">点击步骤查看风险提醒，也可直接拖动调整顺序。</p>
+              <h2 className="text-xl font-semibold text-wood-900">装配计划步序</h2>
+              <p className="mt-1 text-sm text-stone-500">步骤已关联构件与前置，带方向和工具；点击查看，也可直接拖动调整顺序。</p>
             </div>
-            <span className="text-xs text-wood-700">共 {totalDurationSec} 秒</span>
+            <div className="flex flex-col items-end gap-1 text-xs">
+              <span className="text-wood-700">共 {totalDurationSec} 秒</span>
+              {validation.blockedCount > 0 ? (
+                <span className="font-medium text-rose-700">{validation.blockedCount} 步不可执行</span>
+              ) : validation.pendingCount > 0 ? (
+                <span className="font-medium text-amber-700">{validation.pendingCount} 步有待补关系</span>
+              ) : (
+                <span className="font-medium text-emerald-700">全部可执行</span>
+              )}
+            </div>
           </div>
           {steps.length === 0 ? (
-            <BlankPanel title="尚无拆装步骤" description="进入步序编排页补充拆装动作。" />
+            <BlankPanel title="尚无拆装步骤" description="进入装配计划页补充拆装动作。" />
           ) : (
-            <StepRail steps={steps} currentIndex={currentStepIndex} onSelect={setCurrentStep} onMove={(from, to) => void move(from, to)} />
+            <StepRail
+              steps={steps}
+              currentIndex={currentStepIndex}
+              onSelect={setCurrentStep}
+              onMove={(from, to) => void move(from, to)}
+              validations={validationByStep}
+              memberById={memberById}
+              stepById={stepById}
+            />
           )}
         </div>
       </section>

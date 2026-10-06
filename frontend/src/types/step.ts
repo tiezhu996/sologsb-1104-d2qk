@@ -11,5 +11,9 @@ export interface DisassemblyStep {
   tool: StepTool
   riskNote: string
   holdSec: number
+  /** 本步关联的构件 id（装配计划 v3 起必填） */
+  memberIds: string[]
+  /** 前置步骤 id，本步须在所有前置之后执行 */
+  prerequisiteIds: string[]
   schemaRev?: number
 }

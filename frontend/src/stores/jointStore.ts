@@ -68,7 +68,7 @@ export const useJointStore = create<JointState>((set, get) => ({
   },
 
   addJoint: async (draft) => {
-    const joint: JointType = { ...draft, id: createId('joint'), schemaRev: 2 }
+    const joint: JointType = { ...draft, id: createId('joint'), schemaRev: 3 }
     await db.joints.add(joint)
     set((state) => ({
       joints: [...state.joints, joint].sort((a, b) => a.name.localeCompare(b.name, 'zh-CN')),
@@ -79,7 +79,7 @@ export const useJointStore = create<JointState>((set, get) => ({
   },
 
   addFurniture: async (draft) => {
-    const furniture: Furniture = { ...draft, id: createId('furniture'), schemaRev: 2 }
+    const furniture: Furniture = { ...draft, id: createId('furniture'), schemaRev: 3 }
     await db.furniture.add(furniture)
     set((state) => ({ furniture: [...state.furniture, furniture] }))
     return furniture
