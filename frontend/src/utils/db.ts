@@ -40,6 +40,13 @@ export class MortiseDatabase extends Dexie {
         furniture.schemaRev = 2
       })
     })
+    // v3：步骤关联构件与前置。旧步骤不回填前置，保持未定义状态，
+    // 由装配计划校验识别为“缺前置”，进入待补关系。
+    this.version(3).stores(schema).upgrade(async (transaction) => {
+      await transaction.table<DisassemblyStep, string>('steps').toCollection().modify((step) => {
+        step.schemaRev = 3
+      })
+    })
   }
 }
 
@@ -87,18 +94,18 @@ const memberSeeds: Member[] = [
 ]
 
 const stepSeeds: DisassemblyStep[] = [
-  { id: 'step-dt-1', jointTypeId: 'joint-dovetail', seq: 1, action: '拆卸', direction: '轴向', tool: '木槌', riskNote: '先垫软木再轻敲榫肩，避免压伤外露木纹。', holdSec: 6 },
-  { id: 'step-dt-2', jointTypeId: 'joint-dovetail', seq: 2, action: '拆卸', direction: '侧向', tool: '鱼线', riskNote: '沿燕尾斜面缓慢带出，不可强扭大边。', holdSec: 8 },
-  { id: 'step-dt-3', jointTypeId: 'joint-dovetail', seq: 3, action: '装配', direction: '斜向', tool: '木槌', riskNote: '对准齿肩后顺纹推进，听到密实声即停。', holdSec: 7 },
-  { id: 'step-mt-1', jointTypeId: 'joint-mitre', seq: 1, action: '拆卸', direction: '轴向', tool: '撬板', riskNote: '撬板只接触内肩，保护45度外角。', holdSec: 7 },
-  { id: 'step-mt-2', jointTypeId: 'joint-mitre', seq: 2, action: '拆卸', direction: '侧向', tool: '木槌', riskNote: '格肩与暗榫同时退出，防止单侧受力。', holdSec: 8 },
-  { id: 'step-mt-3', jointTypeId: 'joint-mitre', seq: 3, action: '装配', direction: '斜向', tool: '木槌', riskNote: '先合暗榫再落格肩，外角不得挤裂。', holdSec: 9 },
-  { id: 'step-zj-1', jointTypeId: 'joint-corner', seq: 1, action: '拆卸', direction: '轴向', tool: '木槌', riskNote: '三向角点用软垫承托，逐面释放咬合。', holdSec: 8 },
-  { id: 'step-zj-2', jointTypeId: 'joint-corner', seq: 2, action: '拆卸', direction: '斜向', tool: '鱼线', riskNote: '鱼线绕过内角，防止大边端头劈裂。', holdSec: 10 },
-  { id: 'step-zj-3', jointTypeId: 'joint-corner', seq: 3, action: '装配', direction: '轴向', tool: '木槌', riskNote: '三面同时校线，任一面过紧都会抬起另两面。', holdSec: 11 },
-  { id: 'step-bs-1', jointTypeId: 'joint-shoulder', seq: 1, action: '拆卸', direction: '侧向', tool: '撬板', riskNote: '圆材包肩处先松胶线，避免刮伤弧面。', holdSec: 8 },
-  { id: 'step-bs-2', jointTypeId: 'joint-shoulder', seq: 2, action: '拆卸', direction: '轴向', tool: '木槌', riskNote: '沿腿足方向退出，不在抱肩薄壁处施力。', holdSec: 9 },
-  { id: 'step-bs-3', jointTypeId: 'joint-shoulder', seq: 3, action: '装配', direction: '斜向', tool: '木槌', riskNote: '抱肩弧面完全贴服后再压实定位。', holdSec: 10 },
+  { id: 'step-dt-1', jointTypeId: 'joint-dovetail', seq: 1, action: '拆卸', direction: '轴向', tool: '木槌', riskNote: '先垫软木再轻敲榫肩，避免压伤外露木纹。', holdSec: 6, memberId: 'member-dt-frame', isStart: true, prereqIds: [] },
+  { id: 'step-dt-2', jointTypeId: 'joint-dovetail', seq: 2, action: '拆卸', direction: '侧向', tool: '鱼线', riskNote: '沿燕尾斜面缓慢带出，不可强扭大边。', holdSec: 8, memberId: 'member-dt-tenon', prereqIds: ['step-dt-1'] },
+  { id: 'step-dt-3', jointTypeId: 'joint-dovetail', seq: 3, action: '装配', direction: '斜向', tool: '木槌', riskNote: '对准齿肩后顺纹推进，听到密实声即停。', holdSec: 7, memberId: 'member-dt-socket', prereqIds: ['step-dt-2'] },
+  { id: 'step-mt-1', jointTypeId: 'joint-mitre', seq: 1, action: '拆卸', direction: '轴向', tool: '撬板', riskNote: '撬板只接触内肩，保护45度外角。', holdSec: 7, memberId: 'member-mt-rail', isStart: true, prereqIds: [] },
+  { id: 'step-mt-2', jointTypeId: 'joint-mitre', seq: 2, action: '拆卸', direction: '侧向', tool: '木槌', riskNote: '格肩与暗榫同时退出，防止单侧受力。', holdSec: 8, memberId: 'member-mt-tenon', prereqIds: ['step-mt-1'] },
+  { id: 'step-mt-3', jointTypeId: 'joint-mitre', seq: 3, action: '装配', direction: '斜向', tool: '木槌', riskNote: '先合暗榫再落格肩，外角不得挤裂。', holdSec: 9, memberId: 'member-mt-socket', prereqIds: ['step-mt-2'] },
+  { id: 'step-zj-1', jointTypeId: 'joint-corner', seq: 1, action: '拆卸', direction: '轴向', tool: '木槌', riskNote: '三向角点用软垫承托，逐面释放咬合。', holdSec: 8, memberId: 'member-zj-frame', isStart: true, prereqIds: [] },
+  { id: 'step-zj-2', jointTypeId: 'joint-corner', seq: 2, action: '拆卸', direction: '斜向', tool: '鱼线', riskNote: '鱼线绕过内角，防止大边端头劈裂。', holdSec: 10, memberId: 'member-zj-rail', prereqIds: ['step-zj-1'] },
+  { id: 'step-zj-3', jointTypeId: 'joint-corner', seq: 3, action: '装配', direction: '轴向', tool: '木槌', riskNote: '三面同时校线，任一面过紧都会抬起另两面。', holdSec: 11, memberId: 'member-zj-socket', prereqIds: ['step-zj-2'] },
+  { id: 'step-bs-1', jointTypeId: 'joint-shoulder', seq: 1, action: '拆卸', direction: '侧向', tool: '撬板', riskNote: '圆材包肩处先松胶线，避免刮伤弧面。', holdSec: 8, memberId: 'member-bs-rail', isStart: true, prereqIds: [] },
+  { id: 'step-bs-2', jointTypeId: 'joint-shoulder', seq: 2, action: '拆卸', direction: '轴向', tool: '木槌', riskNote: '沿腿足方向退出，不在抱肩薄壁处施力。', holdSec: 9, memberId: 'member-bs-tenon', prereqIds: ['step-bs-1'] },
+  { id: 'step-bs-3', jointTypeId: 'joint-shoulder', seq: 3, action: '装配', direction: '斜向', tool: '橡胶锤', riskNote: '抱肩弧面完全贴服后再压实定位。', holdSec: 10, memberId: 'member-bs-socket', prereqIds: ['step-bs-2'] },
 ]
 
 const diagramSeeds: Diagram[] = [
@@ -178,7 +185,7 @@ async function writeSeedData(): Promise<void> {
   await db.transaction('rw', [db.joints, db.members, db.steps, db.diagrams, db.furniture], async () => {
     await db.joints.bulkAdd(jointSeeds.map((item) => ({ ...item, schemaRev: 2 })))
     await db.members.bulkAdd(memberSeeds.map((item) => ({ ...item, schemaRev: 2 })))
-    await db.steps.bulkAdd(stepSeeds.map((item) => ({ ...item, schemaRev: 2 })))
+    await db.steps.bulkAdd(stepSeeds.map((item) => ({ ...item, schemaRev: 3 })))
     await db.diagrams.bulkAdd(diagramSeeds.map((item) => ({ ...item, schemaRev: 2 })))
     await db.furniture.bulkAdd(furnitureSeeds.map((item) => ({ ...item, schemaRev: 2 })))
   })
